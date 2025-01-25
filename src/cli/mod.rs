@@ -66,6 +66,7 @@ pub fn handle_cli_args() -> Task<Message> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::sync::{Arc, Mutex};
 
     use serial_test::serial;
@@ -126,6 +127,7 @@ mod tests {
         Sniffer::new(
             &Arc::new(Mutex::new(Configs::default())),
             Arc::new(Mutex::new(Some(true))),
+            Arc::new(Mutex::new(HashMap::new())),
         );
     }
 }

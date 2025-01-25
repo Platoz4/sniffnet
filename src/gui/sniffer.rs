@@ -1,6 +1,7 @@
 //! Module defining the application structure: messages, updates, subscriptions.
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -126,12 +127,15 @@ pub struct Sniffer {
     pub id: Option<Id>,
     /// Host data for filter dropdowns (comboboxes)
     pub host_data_states: HostDataStates,
+    /// IP blacklist
+    pub ip_blacklist: Arc<Mutex<HashMap<IpAddr, usize>>>,
 }
 
 impl Sniffer {
     pub fn new(
         configs: &Arc<Mutex<Configs>>,
         newer_release_available: Arc<Mutex<Option<bool>>>,
+        ip_blacklist: Arc<Mutex<HashMap<IpAddr, usize>>>,
     ) -> Self {
         let ConfigSettings {
             style,
@@ -171,6 +175,7 @@ impl Sniffer {
             thumbnail: false,
             id: None,
             host_data_states: HostDataStates::default(),
+            ip_blacklist,
         }
     }
 
@@ -718,6 +723,7 @@ impl Sniffer {
             let filters = self.filters.clone();
             let mmdb_readers = self.mmdb_readers.clone();
             let host_data = self.host_data_states.data.clone();
+            let ip_blacklist = self.ip_blacklist.clone();
             self.device.link_type = capture_context.my_link_type();
             thread::Builder::new()
                 .name("thread_parse_packets".to_string())
@@ -730,6 +736,7 @@ impl Sniffer {
                         &mmdb_readers,
                         capture_context,
                         &host_data,
+                        &ip_blacklist,
                     );
                 })
                 .unwrap();
@@ -963,7 +970,7 @@ impl Sniffer {
 mod tests {
     #![allow(unused_must_use)]
 
-    use std::collections::{HashSet, VecDeque};
+    use std::collections::{HashMap, HashSet, VecDeque};
     use std::fs::remove_file;
     use std::path::Path;
     use std::sync::{Arc, Mutex};
@@ -997,6 +1004,7 @@ mod tests {
         Sniffer::new(
             &Arc::new(Mutex::new(Configs::default())),
             Arc::new(Mutex::new(None)),
+            Arc::new(Mutex::new(HashMap::new())),
         )
     }
 

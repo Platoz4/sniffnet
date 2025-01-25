@@ -1,6 +1,8 @@
 //! Module containing functions executed by the thread in charge of parsing sniffed packets and
 //! inserting them in the shared map.
 
+use std::collections::HashMap;
+use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
@@ -34,6 +36,7 @@ pub fn parse_packets(
     mmdb_readers: &MmdbReaders,
     capture_context: CaptureContext,
     host_data: &Arc<Mutex<HostData>>,
+    ip_blacklist: &Arc<Mutex<HashMap<IpAddr, usize>>>,
 ) {
     let my_link_type = capture_context.my_link_type();
     let (mut cap, mut savefile) = capture_context.consume();
@@ -136,6 +139,7 @@ pub fn parse_packets(
                                 let device2 = device.clone();
                                 let mmdb_readers_2 = mmdb_readers.clone();
                                 let host_data2 = host_data.clone();
+                                let ip_blacklist2 = ip_blacklist.clone();
                                 thread::Builder::new()
                                     .name("thread_reverse_dns_lookup".to_string())
                                     .spawn(move || {
@@ -146,6 +150,7 @@ pub fn parse_packets(
                                             &device2,
                                             &mmdb_readers_2,
                                             &host_data2,
+                                            &ip_blacklist2,
                                         );
                                     })
                                     .unwrap();

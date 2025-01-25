@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::str::FromStr;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use chrono::Local;
 use dns_lookup::lookup_addr;
@@ -306,9 +306,18 @@ pub fn reverse_dns_lookup(
     my_device: &MyDevice,
     mmdb_readers: &MmdbReaders,
     host_data: &Mutex<HostData>,
+    ip_blacklist: &Arc<Mutex<HashMap<IpAddr, usize>>>,
 ) {
     let address_to_lookup = get_address_to_lookup(key, traffic_direction);
     let my_interface_addresses = my_device.addresses.lock().unwrap().clone();
+
+    println!(
+        "{:?}",
+        ip_blacklist
+            .lock()
+            .unwrap()
+            .get(&address_to_lookup.parse().unwrap())
+    );
 
     // perform rDNS lookup
     let lookup_result = lookup_addr(&address_to_lookup.parse().unwrap());

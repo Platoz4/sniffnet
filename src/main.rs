@@ -3,6 +3,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::{panic, process, thread};
 
@@ -34,6 +35,7 @@ use crate::configs::types::configs::{Configs, CONFIGS};
 use crate::gui::sniffer::FONT_FAMILY_NAME;
 use crate::gui::styles::style_constants::{ICONS_BYTES, SARASA_MONO_BOLD_BYTES, SARASA_MONO_BYTES};
 use crate::secondary_threads::check_updates::set_newer_release_status;
+use crate::secondary_threads::fetch_blacklist::fetch_blacklist;
 
 mod chart;
 mod cli;
@@ -74,6 +76,9 @@ pub fn main() -> iced::Result {
     let newer_release_available1 = Arc::new(Mutex::new(None));
     let newer_release_available2 = newer_release_available1.clone();
 
+    let ip_blacklist1 = Arc::new(Mutex::new(HashMap::new()));
+    let ip_blacklist2 = ip_blacklist1.clone();
+
     // kill the main thread as soon as a secondary thread panics
     let orig_hook = panic::take_hook();
     panic::set_hook(Box::new(move |panic_info| {
@@ -88,6 +93,13 @@ pub fn main() -> iced::Result {
         process::exit(130);
     })
     .expect("Error setting Ctrl-C handler");
+
+    thread::Builder::new()
+        .name("thread_fetch_blacklist".to_string())
+        .spawn(move || {
+            fetch_blacklist(&ip_blacklist2);
+        })
+        .unwrap();
 
     thread::Builder::new()
         .name("thread_check_updates".to_string())
@@ -136,7 +148,7 @@ pub fn main() -> iced::Result {
         .scale_factor(Sniffer::scale_factor)
         .run_with(move || {
             (
-                Sniffer::new(&configs1, newer_release_available1),
+                Sniffer::new(&configs1, newer_release_available1, ip_blacklist1),
                 boot_task_chain,
             )
         })
